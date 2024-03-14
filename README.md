@@ -31,11 +31,11 @@ Project Organization
     │
     ├── setup.py           <- makes project pip installable (pip install -e .) so src can be imported
     └── src                <- Source code for use in this project.
-        ├── __init__.py    <- Makes src a Python module
+        ├─main.py        <- Project's main sccript
         │
         ├── data           <- Scripts to download or generate data
         │
-        ├── pertubations   <- Scripts to turn raw pcaps into perturbed pcaps, or into ready network traffic flows
+        ├─operations     <- Scripts to turn raw pcaps into perturbed pcaps, or into ready network traffic flows
         │
         └── models         <- Scripts to train models and then use trained models to make predictions; generally to
                               find optimal perturbation steps
