@@ -1,4 +1,4 @@
-import nfstream
+#import nfstream
 import scapy
 from scapy.all import IP, TCP, UDP, rdpcap
 
@@ -7,6 +7,7 @@ UDP_EXPIRATION = 240.0
 
 
 def generate_pseudo_hash(entity):
+    '''
     if isinstance(entity, nfstream.flow.NFlow):
         elements = [
             hash(entity.src_ip),
@@ -15,11 +16,12 @@ def generate_pseudo_hash(entity):
             int(entity.dst_port),
             int(entity.protocol),
         ]
+        '''
 
     # elif isinstance(entity, pyshark.packet.packet.Packet):
     #    elements = [hash(entity.ip.src), hash(entity.ip.dst), int(entity[entity.transport_layer].srcport), int(entity[entity.transport_layer].dstport), int(entity.ip.proto)]
 
-    elif isinstance(entity, scapy.layers.l2.Ether):
+    if isinstance(entity, scapy.layers.l2.Ether):
         if entity.haslayer(TCP):
             elements = [
                 hash(entity[IP].src),

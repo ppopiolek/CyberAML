@@ -12,6 +12,7 @@ class TruncatedPacket:
         flow_id,
         direction,
         src_ip,
+        fragmented,   
         tcp,
         udp,
         fin,
@@ -28,6 +29,7 @@ class TruncatedPacket:
         self.flow_id = flow_id
         self.direction = direction
         self.src_ip = src_ip
+        self.fragmented = fragmented
         self.tcp = tcp
         self.udp = udp
         self.fin = fin
@@ -40,7 +42,7 @@ class TruncatedPacket:
     def __repr__(self):
         return (
             f"TruncatedPacket(packet_id={self.packet_id}, timestamp={self.timestamp}, size={self.size}, "
-            f"pseudo_hash='{self.pseudo_hash}', flow_id={self.flow_id}, direction='{self.direction}', src_ip={self.src_ip}, "
+            f"pseudo_hash='{self.pseudo_hash}', flow_id={self.flow_id}, direction='{self.direction}', src_ip={self.src_ip}, fragmented={self.fragmented}, "
             f"tcp={self.tcp}, udp={self.udp}, fin={self.fin}, syn={self.syn}, rst={self.rst}, ack={self.ack}, psh={self.psh}, urg={self.urg})"
         )
 
@@ -72,13 +74,14 @@ def create_truncated_packets_from_pcap(file_path):
             udp = int(scapy_packet.haslayer(UDP))
 
             truncated_packet = TruncatedPacket(
-                packet_id=packet_number * 10,  # According to schema
+                packet_id=packet_number,  # According to schema
                 timestamp=scapy_packet.time,  # Timestamp will need to have margin of error
                 size=len(scapy_packet),
                 pseudo_hash=pseudo_hash,
                 flow_id=None,  # Later assignment
                 direction=0,  # 0 - not yet analyzed, 1 - fwd, 2 - bwd
                 src_ip=scapy_packet[IP].src,
+                fragmented=0, # 0 for non-fragmented, 1 - for signle fragmentation (MTU = size/2), 2 - for double fragmentation (MTU = size/4)
                 tcp=tcp,
                 udp=udp,
                 fin=fin,

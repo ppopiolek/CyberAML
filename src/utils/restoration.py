@@ -112,7 +112,7 @@ def modify_and_write_packets_one_by_one(
     with PcapReader(original_pcap) as reader:
         for i, packet in enumerate(reader):
             if IP in packet:
-                packet_id = (i * 10) + 1
+                packet_id = i + 1
                 if packet_id in truncated_packets_dict:
                     tp = truncated_packets_dict[packet_id]
 
