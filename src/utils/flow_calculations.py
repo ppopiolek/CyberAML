@@ -82,15 +82,6 @@ def total_packet_count(flow_id, truncated_packets, direction=0):
     return count
 
 
-def total_packet_count(flow_id, truncated_packets, direction=0):
-    count = sum(
-        1
-        for pkt in truncated_packets
-        if pkt.flow_id == flow_id and (direction == 0 or pkt.direction == direction)
-    )
-    return count
-
-
 def count_tcp_flags(flow_id, truncated_packets, direction=0):
     flags_count = {"FIN": 0, "SYN": 0, "RST": 0, "PSH": 0, "ACK": 0, "URG": 0}
     for pkt in truncated_packets:
