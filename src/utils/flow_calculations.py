@@ -9,7 +9,7 @@ def calculate_size_statistics(flow_id, truncated_packets, direction=0):
     Parameters:
     - flow_id: The specific flow_id for which to calculate size statistics.
     - truncated_packets: A list of TruncatedPacket objects.
-    - direction: The direction of packets to include (0 for all, 1 for src->dst, 2 for dst->src).
+    - direction: The direction of packets to include (0 for all, 1 for src->dst (fwd), 2 for dst->src (bwd)).
     
     Returns:
     A dictionary with calculated size statistics: mean, min, max, std or a message if no packets match criteria.

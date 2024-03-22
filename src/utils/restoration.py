@@ -123,13 +123,12 @@ def modify_and_write_packets_one_by_one(
                     packet_length = len(packet)
                     if packet_length < tp.size:
                         packet = add_padding(packet, tp.size - packet_length)
-                    elif packet_length > tp.size:
-                        packet = fragment_packet(packet, tp.size)
 
-                    # TODO: Implement conditions for dummy_packet, split_flow, or dummy_flag
-
-                    # if dla od (packet_id * 10 + 5) do (packet_id * 10 + 9) istnieja jakies truncated packets o takich indeksach to:
-                    #    dummy_packet albo flow_split albo dummy_flag to jeszcze to zaimplementowania
+                    # Fragmentation
+                    if tp.fragmented == 1:
+                        packet = fragment_packet(packet, int(tp.size/2))
+                    elif tp.fragmented == 2:
+                        packet = fragment_packet(packet, int(tp.size/4))
 
                     # TEST CASE SCENARIOS WHICH WORKED:
 
@@ -157,7 +156,7 @@ def modify_and_write_packets_one_by_one(
                     # DUMMY FLAG
                     # writer.write(packet) - donr send afterwards
                     # writer.write(dummy_flag(packet, "SA"))
-# TODO: upewnic sie czy tu z tabami okej
+
             writer.write(packet)
 
     writer.close()
