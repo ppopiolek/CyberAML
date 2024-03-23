@@ -94,3 +94,12 @@ def create_truncated_packets_from_pcap(file_path):
             truncated_packets.append(truncated_packet)
 
     return truncated_packets
+
+def count_directions(truncated_packets, flow_id):
+    direction_counts = {"1": 0, "2": 0}
+    for packet in truncated_packets:
+        if packet.flow_id == flow_id:
+            # Ensure the direction is treated as a string
+            direction_str = str(packet.direction)
+            direction_counts[direction_str] += 1
+    return direction_counts

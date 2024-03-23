@@ -25,9 +25,14 @@ def calculate_size_statistics(flow_id, truncated_packets, direction=0):
                 sizes.extend([pkt.size / 4] * 4)  # Fragment into 4 parts
 
     if not sizes:
-        return "No packets found matching criteria."
+        return {
+        "mean": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "std": 0.0,
+    }
 
-    size_mean = np.mean(sizes)
+    size_mean = np.mean(sizes) 
     size_min = np.min(sizes)
     size_max = np.max(sizes)
     size_std = np.std(sizes)
@@ -52,7 +57,12 @@ def calculate_delta_time_statistics(flow_id, truncated_packets, direction=0):
                 timestamps.extend([pkt.timestamp] * 4)
 
     if len(timestamps) < 2:
-        return "Insufficient packets for delta time calculation."
+        return {
+        "mean": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "std": 0.0,
+    }
 
     # Sort timestamps before calculating deltas to ensure chronological order
     timestamps = sorted(timestamps)
@@ -63,10 +73,10 @@ def calculate_delta_time_statistics(flow_id, truncated_packets, direction=0):
     delta_times = np.array(delta_times, dtype=float)
 
     # Calculate and return statistical measures for delta times
-    delta_time_mean = np.mean(delta_times)
-    delta_time_min = np.min(delta_times)
-    delta_time_max = np.max(delta_times)
-    delta_time_std = np.std(delta_times)
+    delta_time_mean = np.mean(delta_times) * 1000000.0
+    delta_time_min = np.min(delta_times) * 1000000.0
+    delta_time_max = np.max(delta_times) * 1000000.0
+    delta_time_std = np.std(delta_times) * 1000000.0
 
     return {
         "mean": delta_time_mean,
@@ -94,9 +104,9 @@ def total_flow_duration(flow_id, truncated_packets, direction=0):
         if pkt.flow_id == flow_id and (direction == 0 or pkt.direction == direction)
     ]
     if timestamps:
-        return max(timestamps) - min(timestamps)
+        return (max(timestamps) - min(timestamps)) * 1000000.0
     else:
-        return "No packets found matching criteria."
+        return 0.0
 
 
 def total_packet_count(flow_id, truncated_packets, direction=0):

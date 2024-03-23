@@ -16,6 +16,8 @@ def generate_weights(length, focus_point='middle', scaling_factor=1.0):
     Generates weights for adjusting sizes or timestamps based on a normal distribution,
     focused on a specific part of the sequence with a scaling factor.
     """
+    if length == 0:
+        return np.ones(1)
     x = np.linspace(0, length, num=length)
     if focus_point == 'start':
         mean = length * 0.25
@@ -25,6 +27,9 @@ def generate_weights(length, focus_point='middle', scaling_factor=1.0):
         mean = length / 2
     std_dev = length / 10  # Control the spread of the influence
     weights = norm.pdf(x, loc=mean, scale=std_dev)
+    if np.max(weights) == 0:
+        # If the maximum weight is 0, avoid division by zero.
+        return np.full(length, scaling_factor)
     weights /= np.max(weights)  # Normalize
     weights = weights * (scaling_factor - 1) + 1  # Adjust scaling
     return weights

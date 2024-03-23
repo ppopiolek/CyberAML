@@ -106,7 +106,8 @@ def apply_time_perturbation_with_focus(truncated_packets, flow_id, method, focus
         mean = num_packets * 0.75
     else:  # Default to 'middle'
         mean = num_packets / 2
-    
+    if isinstance(scaling_factor, str):
+        raise ValueError(f"scaling_factor can't be string: {scaling_factor}")
     # Use a scaling factor to adjust the spread of the distribution
     stddev = max(num_packets / (10 * scaling_factor), 1)  # Ensure stddev is at least 1 to avoid division by zero
 
