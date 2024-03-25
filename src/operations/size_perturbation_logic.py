@@ -1,15 +1,6 @@
 import numpy as np
 from scipy.stats import norm
-
-class TruncatedPacket:
-    def __init__(self, packet_id, timestamp, size, pseudo_hash, flow_id, direction, fragmented=0):
-        self.packet_id = packet_id
-        self.timestamp = timestamp
-        self.size = size
-        self.pseudo_hash = pseudo_hash
-        self.flow_id = flow_id
-        self.direction = direction
-        self.fragmented = fragmented
+import copy
 
 def generate_weights(length, focus_point='middle', scaling_factor=1.0):
     """
@@ -79,3 +70,40 @@ def adjust_packet_size(truncated_packets, flow_id, direction, method='uniform', 
                 packet.fragmented = 0
     
     return truncated_packets
+
+
+def adjust_packet_size_deepcopy(truncated_packets, flow_id, direction, method='uniform', scaling_factor=1.0, focus_point='middle'):
+
+    filtered_packets = [p for p in truncated_packets if p.flow_id == flow_id]
+    filtered_packets_copy = copy.deepcopy(filtered_packets)
+    
+    if direction == 0:
+        filtered_packets_copy_copy = [p for p in filtered_packets_copy if p.flow_id == flow_id]
+    else:
+        filtered_packets_copy_copy = [p for p in filtered_packets_copy if p.flow_id == flow_id and p.direction == direction]
+    
+    num_packets = len(filtered_packets_copy_copy)
+
+
+    if method == 'normal':
+        weights = generate_weights(num_packets, focus_point=focus_point, scaling_factor=scaling_factor)
+    else:
+        weights = np.full(num_packets, scaling_factor)
+
+    for i, packet in enumerate(filtered_packets_copy_copy):
+        weight = weights[min(i, len(weights) - 1)]
+        target_size = packet.size * weight
+
+        if target_size > packet.size:
+            packet.size = min(int(target_size), 1500)
+        
+        elif target_size < packet.size:
+            if packet.size >= 300 and target_size < packet.size * 1 / 4:  
+                packet.fragmented = 2  
+            elif packet.size >= 150 and target_size < packet.size * 3 / 4: 
+                packet.fragmented = 1 
+            else:
+                packet.fragmented = 0
+
+    return filtered_packets_copy
+

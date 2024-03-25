@@ -23,7 +23,7 @@ def load_and_train(folder_path, normal_data_path, models_save_path):
             #scaler = StandardScaler()
             #X_scaled = scaler.fit_transform(X)
             
-            clf = LogisticRegression(random_state=42, max_iter=5000)
+            clf = LogisticRegression(random_state=42, max_iter=10000 )
             clf.fit(X, y)
             
             model_name = filename.replace('_processed.csv', '_LR_model.pkl')
