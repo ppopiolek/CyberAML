@@ -92,6 +92,7 @@ def create_truncated_packets_from_pcap(file_path):
                 urg=urg,
             )
             truncated_packets.append(truncated_packet)
+            
 
     return truncated_packets
 
@@ -103,3 +104,40 @@ def count_directions(truncated_packets, flow_id):
             direction_str = str(packet.direction)
             direction_counts[direction_str] += 1
     return direction_counts
+from collections import defaultdict
+import random
+
+def undersample_flows_with_distribution(truncated_packets, flow_num):
+    """
+    Randomly reduce the total number of unique flow IDs while attempting to preserve the original packet count distribution
+    across the flows. Flows with more packets are more likely to be selected.
+
+    Args:
+    - truncated_packets: List of TruncatedPacket objects.
+    - flow_num: The desired maximum number of unique flow IDs to keep.
+
+    Returns:
+    - A list of TruncatedPacket objects filtered to include only the desired number of unique flow IDs, attempting to preserve
+      the original distribution of packet counts per flow.
+    """
+    # Count packets per flow_id
+    flow_counts = defaultdict(int)
+    for packet in truncated_packets:
+        flow_counts[packet.flow_id] += 1
+
+    # If we have fewer or equal unique flows than flow_num, no need to undersample
+    if len(flow_counts) <= flow_num:
+        return truncated_packets
+
+    # Prepare for weighted sampling
+    flows, weights = zip(*flow_counts.items())
+    total_packets = sum(weights)
+    weights_normalized = [count / total_packets for count in weights]
+
+    # Select flow_ids based on their weight (packet count)
+    selected_flows = set(random.choices(flows, weights=weights_normalized, k=flow_num))
+
+    # Filter packets to keep only those within selected flows
+    filtered_packets = [packet for packet in truncated_packets if packet.flow_id in selected_flows]
+
+    return filtered_packets

@@ -6,6 +6,7 @@ from src.operations.size_perturbation_logic import *
 from src.operations.timing_perturbation_logic import *
 import pandas as pd
 import joblib
+import catboost
 
 def prepare_size_stats(truncated_packets, flow_id):
     
@@ -83,16 +84,41 @@ def predict_single_flow(model_name, sizing_stats, timing_stats):
     flow_df = pd.DataFrame([flow_stats])
 
     models_folder = '../models/fitness' # from notebook
-    #models_folder = '../models' # TODO: TEST
+    #models_folder = '../models' # TODO: TEST - from notebook
     #models_folder = '../../models/fitness' # oryg.?
     clf = joblib.load(f"{models_folder}/{model_name}_RF_model.pkl") # oryg.
     #from catboost import CatBoostClassifier, CatBoostRegressor
-    #model = CatBoostClassifier()
+    #model = CatBoostRegressor()
     #model.load_model(f"{models_folder}/botnet-capture-20110815-fast-flux-2_regressor_model.cbm")
     probabilities = clf.predict_proba(flow_df) # oryg.
-    #probabilities = model.predict_proba(flow_df)
+    #probabilities = model.predict(flow_df)
     
     malicious_probability = probabilities[0][1]
+    #malicious_probability = probabilities
+    
+    #print(f"Malicious score (probability) for the flow: {malicious_probability*100:.2f}%")
+    
+    return malicious_probability
+
+
+def predict_single_flow_target(model_name, sizing_stats, timing_stats):
+
+    flow_stats = {**sizing_stats, **timing_stats}
+    
+    flow_df = pd.DataFrame([flow_stats])
+
+    #models_folder = '../models/fitness' # from notebook
+    models_folder = '../models' # TODO: TEST - from notebook
+    #models_folder = '../../models/fitness' # oryg.?
+    #clf = joblib.load(f"{models_folder}/{model_name}_RF_model.pkl") # oryg.
+    from catboost import CatBoostClassifier, CatBoostRegressor
+    model = CatBoostRegressor()
+    model.load_model(f"{models_folder}/{model_name}_regressor_model.cbm")
+    #probabilities = clf.predict_proba(flow_df) # oryg.
+    probabilities = model.predict(flow_df)
+    
+    #malicious_probability = probabilities[0][1]
+    malicious_probability = probabilities[0]
     
     #print(f"Malicious score (probability) for the flow: {malicious_probability*100:.2f}%")
     

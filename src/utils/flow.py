@@ -1,9 +1,10 @@
 #import nfstream
 import scapy
 from scapy.all import IP, TCP, UDP, rdpcap
+from collections import defaultdict
 
-TCP_EXPIRATION = 240.0
-UDP_EXPIRATION = 240.0
+TCP_EXPIRATION = 240000000
+UDP_EXPIRATION = 240000000
 
 
 def generate_pseudo_hash(entity):
@@ -43,63 +44,58 @@ def generate_pseudo_hash(entity):
 
     return sum(elements)
 
-
 def assign_flow_ids_to_packets(truncated_packets):
-    from collections import defaultdict
-
-    # Group packets by pseudo_hash
     packets_by_hash = defaultdict(list)
     for packet in truncated_packets:
+        #packet.pseudo_hash = generate_pseudo_hash(packet)  # Upewnij się, że każdy pakiet ma pseudo_hash
         packets_by_hash[packet.pseudo_hash].append(packet)
 
-    global_flow_id = 1  # Initialize global flow ID
+    global_flow_id = 1
+    flow_start_timestamp = {}  # Słownik do przechowywania początkowego znacznika czasu dla każdego przepływu
 
     for hash_group in packets_by_hash.values():
-        # Sort packets within each group by timestamp
         hash_group.sort(key=lambda pkt: pkt.timestamp)
 
-        first_packet_src_ip = None  # Source IP of the first packet in a flow
-        last_timestamp = None  # Timestamp of the last packet
-        waiting_for_new_flow = False  # Indicates if we are waiting to start a new flow
+        first_packet_src_ip = None
+        last_timestamp = None
+        waiting_for_new_flow = False
 
         for i, packet in enumerate(hash_group):
-            # Check conditions for ending the current flow
+            # Dodajemy początkowy znacznik czasu dla przepływu, jeśli jeszcze go nie ma
+            if global_flow_id not in flow_start_timestamp:
+                flow_start_timestamp[global_flow_id] = packet.timestamp
+
+            # Oblicz czas trwania przepływu
+            flow_duration = packet.timestamp - flow_start_timestamp[global_flow_id]
+
+            # Zaktualizowane warunki uwzględniające czas trwania przepływu
             timeout_condition = (
-                packet.tcp
-                and last_timestamp is not None
-                and (packet.timestamp - last_timestamp) > TCP_EXPIRATION
-            ) or (
-                packet.udp
-                and last_timestamp is not None
-                and (packet.timestamp - last_timestamp) > UDP_EXPIRATION
+                (packet.tcp or packet.udp) and
+                last_timestamp is not None and
+                (packet.timestamp - last_timestamp > TCP_EXPIRATION or packet.timestamp - last_timestamp > UDP_EXPIRATION)
             )
             fin_condition = packet.tcp and packet.fin and not waiting_for_new_flow
+            #fin_condition = 0
 
             if timeout_condition or fin_condition:
-                if timeout_condition:  # New flow starts after a timeout, not after FIN
-                    waiting_for_new_flow = True
-                if fin_condition:  # After FIN, we're still in the same flow
-                    waiting_for_new_flow = False
+                waiting_for_new_flow = True if timeout_condition else False
 
-            if (
-                waiting_for_new_flow and not packet.fin
-            ):  # New flow starts after FIN or timeout
+            if waiting_for_new_flow and not packet.fin:
                 global_flow_id += 1
-                waiting_for_new_flow = False  # Reset waiting for new flow
+                waiting_for_new_flow = False
+                flow_start_timestamp[global_flow_id] = packet.timestamp  # Rozpoczęcie nowego przepływu
 
-            if (
-                not first_packet_src_ip or waiting_for_new_flow
-            ):  # Setting for a new flow
+            if not first_packet_src_ip or waiting_for_new_flow:
                 first_packet_src_ip = packet.src_ip
 
             packet.flow_id = global_flow_id
             packet.direction = 1 if packet.src_ip == first_packet_src_ip else 2
 
-            last_timestamp = packet.timestamp  # Update the timestamp of the last packet
+            last_timestamp = packet.timestamp
 
-            # If it's the last packet in the hash group, ensure we end the current flow
             if i == len(hash_group) - 1:
                 global_flow_id += 1
                 waiting_for_new_flow = False
 
     return truncated_packets
+
