@@ -3,6 +3,11 @@ CyberAML
 
 Prractial Adversarial Attacks on Flow-Based Network Intrusion Detection Systems
 
+Create conda env for this project with:
+
+```conda create --name <env> --file requirements.txt```
+
+
 Project Organization
 ------------
 
