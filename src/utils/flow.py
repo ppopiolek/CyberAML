@@ -1,101 +1,61 @@
-#import nfstream
 import scapy
 from scapy.all import IP, TCP, UDP, rdpcap
 from collections import defaultdict
 
-TCP_EXPIRATION = 240000000
-UDP_EXPIRATION = 240000000
-
-
-def generate_pseudo_hash(entity):
-    '''
-    if isinstance(entity, nfstream.flow.NFlow):
-        elements = [
-            hash(entity.src_ip),
-            hash(entity.dst_ip),
-            int(entity.src_port),
-            int(entity.dst_port),
-            int(entity.protocol),
-        ]
-        '''
-
-    # elif isinstance(entity, pyshark.packet.packet.Packet):
-    #    elements = [hash(entity.ip.src), hash(entity.ip.dst), int(entity[entity.transport_layer].srcport), int(entity[entity.transport_layer].dstport), int(entity.ip.proto)]
-
-    if isinstance(entity, scapy.layers.l2.Ether):
-        if entity.haslayer(TCP):
-            elements = [
-                hash(entity[IP].src),
-                hash(entity[IP].dst),
-                int(entity[TCP].sport),
-                int(entity[TCP].dport),
-                int(entity[IP].proto),
-            ]
-        elif entity.haslayer(UDP):
-            elements = [
-                hash(entity[IP].src),
-                hash(entity[IP].dst),
-                int(entity[UDP].sport),
-                int(entity[UDP].dport),
-                int(entity[IP].proto),
-            ]
-    else:
-        print("ERROR: not a flow nor packet")
-
-    return sum(elements)
+TCP_EXPIRATION = 240  # 2x typical MSL (Maximum Segment Lifetime) for TCP
+UDP_EXPIRATION = 600 # Sufficiently long for UDP
 
 def assign_flow_ids_to_packets(truncated_packets):
     packets_by_hash = defaultdict(list)
     for packet in truncated_packets:
-        #packet.pseudo_hash = generate_pseudo_hash(packet)  # Upewnij się, że każdy pakiet ma pseudo_hash
-        packets_by_hash[packet.pseudo_hash].append(packet)
+        #packet.pseudo_hash = generate_pseudo_hash(packet)  # Ensure each packet has a pseudo_hash
+        if packet.pseudo_hash is not None:
+            packets_by_hash[packet.pseudo_hash].append(packet)
 
+    print(f"hash groups: {len(packets_by_hash)}")
     global_flow_id = 1
-    flow_start_timestamp = {}  # Słownik do przechowywania początkowego znacznika czasu dla każdego przepływu
+    flow_start_timestamp = {}  # Dictionary to store the initial timestamp for each flow
+    first_packet_src_ip = None  # Reset at the beginning of processing
+
+    fin_count = defaultdict(int)  # Tracks the number of FIN flags seen in each flow
 
     for hash_group in packets_by_hash.values():
         hash_group.sort(key=lambda pkt: pkt.timestamp)
+        #print(f"Hash group: {hash_group}")
 
-        first_packet_src_ip = None
         last_timestamp = None
-        waiting_for_new_flow = False
+        new_flow_needed = False  # Flag to indicate if a new flow is needed
 
-        for i, packet in enumerate(hash_group):
-            # Dodajemy początkowy znacznik czasu dla przepływu, jeśli jeszcze go nie ma
+        for packet in hash_group:
             if global_flow_id not in flow_start_timestamp:
                 flow_start_timestamp[global_flow_id] = packet.timestamp
-
-            # Oblicz czas trwania przepływu
-            flow_duration = packet.timestamp - flow_start_timestamp[global_flow_id]
-
-            # Zaktualizowane warunki uwzględniające czas trwania przepływu
-            timeout_condition = (
-                (packet.tcp or packet.udp) and
-                last_timestamp is not None and
-                (packet.timestamp - last_timestamp > TCP_EXPIRATION or packet.timestamp - last_timestamp > UDP_EXPIRATION)
-            )
-            fin_condition = packet.tcp and packet.fin and not waiting_for_new_flow
-            #fin_condition = 0
-
-            if timeout_condition or fin_condition:
-                waiting_for_new_flow = True if timeout_condition else False
-
-            if waiting_for_new_flow and not packet.fin:
-                global_flow_id += 1
-                waiting_for_new_flow = False
-                flow_start_timestamp[global_flow_id] = packet.timestamp  # Rozpoczęcie nowego przepływu
-
-            if not first_packet_src_ip or waiting_for_new_flow:
                 first_packet_src_ip = packet.src_ip
+
+            if last_timestamp is not None:
+                time_since_last_packet = packet.timestamp - last_timestamp
+            else:
+                time_since_last_packet = 0
+
+            # Determine the expiration time based on the type of packet
+            expiration_time = TCP_EXPIRATION if packet.tcp else UDP_EXPIRATION
+
+            if time_since_last_packet >= expiration_time or new_flow_needed:
+                # Handle expiration or post-second FIN new flow
+                global_flow_id += 1
+                flow_start_timestamp[global_flow_id] = packet.timestamp
+                first_packet_src_ip = packet.src_ip  # Start new flow with the current packet IP
+                new_flow_needed = False
+                fin_count[global_flow_id] = 0  # Reset FIN counter for the new flow
+
+            if packet.fin: # it has to be on the end of the function, because we want next packet for this hash (after double FIN) to be assigned to new flow
+                fin_count[global_flow_id] += 1
+                # Only end the flow after the second FIN flag in the same flow
+                if fin_count[global_flow_id] >= 2:
+                    new_flow_needed = True # TODO: False only for testing, must be True !
+
 
             packet.flow_id = global_flow_id
             packet.direction = 1 if packet.src_ip == first_packet_src_ip else 2
-
             last_timestamp = packet.timestamp
 
-            if i == len(hash_group) - 1:
-                global_flow_id += 1
-                waiting_for_new_flow = False
-
     return truncated_packets
-

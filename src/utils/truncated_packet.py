@@ -1,4 +1,3 @@
-from .flow import generate_pseudo_hash
 from scapy.all import IP, TCP, UDP, rdpcap
 
 
@@ -45,6 +44,29 @@ class TruncatedPacket:
             f"pseudo_hash='{self.pseudo_hash}', flow_id={self.flow_id}, direction='{self.direction}', src_ip={self.src_ip}, fragmented={self.fragmented}, "
             f"tcp={self.tcp}, udp={self.udp}, fin={self.fin}, syn={self.syn}, rst={self.rst}, ack={self.ack}, psh={self.psh}, urg={self.urg})"
         )
+
+
+def generate_pseudo_hash(entity):
+    elements = []
+
+    if entity.haslayer(TCP):
+        elements = [
+            hash(entity[IP].src),
+            hash(entity[IP].dst),
+            int(entity[TCP].sport), #TODO: PRZYWROCIC
+            int(entity[TCP].dport),
+            int(entity[IP].proto),
+        ]
+    elif entity.haslayer(UDP):
+        elements = [
+            hash(entity[IP].src),
+            hash(entity[IP].dst),
+            int(entity[UDP].sport),
+            int(entity[UDP].dport),
+            int(entity[IP].proto),
+        ]
+
+    return int(sum(elements)) if elements else None  # Returns the sum of 'elements' or None if the list is empty
 
 
 def create_truncated_packets_from_pcap(file_path):
