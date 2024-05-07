@@ -12,7 +12,7 @@ def assign_flow_ids_to_packets(truncated_packets):
         if packet.pseudo_hash is not None:
             packets_by_hash[packet.pseudo_hash].append(packet)
 
-    print(f"hash groups: {len(packets_by_hash)}")
+    print(f"hash groups: {len(packets_by_hash.values())}")
     global_flow_id = 1
     flow_start_timestamp = {}  # Dictionary to store the initial timestamp for each flow
     first_packet_src_ip = None  # Reset at the beginning of processing
@@ -21,10 +21,9 @@ def assign_flow_ids_to_packets(truncated_packets):
 
     for hash_group in packets_by_hash.values():
         hash_group.sort(key=lambda pkt: pkt.timestamp)
-        #print(f"Hash group: {hash_group}")
 
         last_timestamp = None
-        new_flow_needed = False  # Flag to indicate if a new flow is needed
+        new_flow_needed = False # Flag to indicate if a new flow is needed # TODO: new flow needed at the last packet
 
         for packet in hash_group:
             if global_flow_id not in flow_start_timestamp:
@@ -39,13 +38,17 @@ def assign_flow_ids_to_packets(truncated_packets):
             # Determine the expiration time based on the type of packet
             expiration_time = TCP_EXPIRATION if packet.tcp else UDP_EXPIRATION
 
-            if time_since_last_packet >= expiration_time or new_flow_needed:
+            if time_since_last_packet >= expiration_time:
+                new_flow_needed = True
+
+            if new_flow_needed:
                 # Handle expiration or post-second FIN new flow
                 global_flow_id += 1
                 flow_start_timestamp[global_flow_id] = packet.timestamp
                 first_packet_src_ip = packet.src_ip  # Start new flow with the current packet IP
                 new_flow_needed = False
                 fin_count[global_flow_id] = 0  # Reset FIN counter for the new flow
+                last_timestamp = packet.timestamp # ?
 
             if packet.fin: # it has to be on the end of the function, because we want next packet for this hash (after double FIN) to be assigned to new flow
                 fin_count[global_flow_id] += 1
