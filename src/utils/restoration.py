@@ -156,8 +156,9 @@ def modify_and_write_packets_one_by_one(
                     # DUMMY FLAG
                     # writer.write(packet) - donr send afterwards
                     # writer.write(dummy_flag(packet, "SA"))
-                    
-                    writer.write(packet) # <--- don't write packet if not in truncated_packets list
-            #writer.write(packet) # <--- always write packet - even if not in truncated_packets
+
+                    #TODO: test
+                    #writer.write(packet) # <--- don't write packet if not in truncated_packets list
+            writer.write(packet) # <--- always write packet - even if not in truncated_packets
 
     writer.close()
