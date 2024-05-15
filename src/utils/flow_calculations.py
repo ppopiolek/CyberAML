@@ -72,7 +72,7 @@ def calculate_delta_time_statistics(flow_id, truncated_packets, direction=0):
     # Convert delta_times to a numpy array of float type to ensure compatibility with numpy operations
     delta_times = np.array(delta_times, dtype=float)
 
-    # Calculate and return statistical measures for delta times
+    # Calculate and return statistical measures for delta times - * 1000000 because CICFlowMeter also calculates time deltas like that
     delta_time_mean = np.mean(delta_times) * 1000000.0
     delta_time_min = np.min(delta_times) * 1000000.0
     delta_time_max = np.max(delta_times) * 1000000.0
