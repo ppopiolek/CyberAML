@@ -84,7 +84,6 @@ def predict_single_flow(model_name, sizing_stats, timing_stats):
     flow_df = pd.DataFrame([flow_stats])
 
     models_folder = '../models/fitness' # from notebook
-    #models_folder = '../models' # TODO: TEST - from notebook
     #models_folder = '../../models/fitness' # oryg.
     clf = joblib.load(f"{models_folder}/{model_name}_RF_model.pkl") # oryg.
     #from catboost import CatBoostClassifier, CatBoostRegressor
@@ -107,9 +106,7 @@ def predict_single_flow_target(model_name, sizing_stats, timing_stats):
     
     flow_df = pd.DataFrame([flow_stats])
 
-    #models_folder = '../models/fitness' # from notebook
-    models_folder = '../models' # TODO: TEST - from notebook
-    #models_folder = '../../models/fitness' # oryg.?
+    models_folder = '../models' from notebook
     #clf = joblib.load(f"{models_folder}/{model_name}_RF_model.pkl") # oryg.
     from catboost import CatBoostClassifier, CatBoostRegressor
     model = CatBoostRegressor()
